@@ -1,0 +1,139 @@
+diff --git a/client/client_test.go b/client/client_test.go
+index cf2ccf5..1f8410a 100644
+--- a/client/client_test.go
++++ b/client/client_test.go
+@@ -6,7 +6,6 @@ package client
+ import (
+ 	"fmt"
+ 	"io/fs"
+-	"net"
+ 	"os"
+ 	"path/filepath"
+ 	"runtime"
+@@ -47,6 +46,7 @@ import (
+ 	"github.com/shoenig/test/wait"
+ 	"github.com/stretchr/testify/assert"
+ 	"github.com/stretchr/testify/require"
++	"github.com/wlynxg/anet"
+ )
+ 
+ func testACLServer(t *testing.T, cb func(*nomad.Config)) (*nomad.Server, string, *structs.ACLToken, func()) {
+@@ -1710,7 +1710,7 @@ func TestClient_UpdateNodeFromFingerprintKeepsConfig(t *testing.T) {
+ 	// lookup an interface. client.Node starts with a hardcoded value, eth0,
+ 	// and is only updated async through fingerprinter.
+ 	// Let's just lookup network device; anyone will do for this test
+-	interfaces, err := net.Interfaces()
++	interfaces, err := anet.Interfaces()
+ 	must.NoError(t, err)
+ 	must.NotNil(t, interfaces)
+ 	dev := interfaces[0].Name
+diff --git a/client/fingerprint/network.go b/client/fingerprint/network.go
+index ab25fa8..d720fff 100644
+--- a/client/fingerprint/network.go
++++ b/client/fingerprint/network.go
+@@ -14,6 +14,7 @@ import (
+ 	"github.com/hashicorp/go-sockaddr/template"
+ 	"github.com/hashicorp/nomad/client/config"
+ 	"github.com/hashicorp/nomad/nomad/structs"
++	"github.com/wlynxg/anet"
+ )
+ 
+ const (
+@@ -52,15 +53,15 @@ type DefaultNetworkInterfaceDetector struct {
+ }
+ 
+ func (b *DefaultNetworkInterfaceDetector) Interfaces() ([]net.Interface, error) {
+-	return net.Interfaces()
++	return anet.Interfaces()
+ }
+ 
+ func (b *DefaultNetworkInterfaceDetector) InterfaceByName(name string) (*net.Interface, error) {
+-	return net.InterfaceByName(name)
++	return anet.InterfaceByName(name)
+ }
+ 
+ func (b *DefaultNetworkInterfaceDetector) Addrs(intf *net.Interface) ([]net.Addr, error) {
+-	return intf.Addrs()
++	return anet.InterfaceAddrsByInterface(intf)
+ }
+ 
+ // NewNetworkFingerprint returns a new NetworkFingerprinter with the given
+diff --git a/command/agent/config.go b/command/agent/config.go
+index 2cbf4ac..c3ed036 100644
+--- a/command/agent/config.go
++++ b/command/agent/config.go
+@@ -34,6 +34,7 @@ import (
+ 	"github.com/hashicorp/nomad/nomad/structs"
+ 	"github.com/hashicorp/nomad/nomad/structs/config"
+ 	"github.com/hashicorp/nomad/version"
++	"github.com/wlynxg/anet"
+ )
+ 
+ // Config is the configuration for the Nomad agent.
+@@ -2411,7 +2412,7 @@ func parseSingleInterfaceTemplate(tpl string) (string, error) {
+ 	// guaranteed separators that we can use to test if the template returned
+ 	// multiple interfaces.
+ 	// The test below checks if the template results to a single valid interface.
+-	_, err = net.InterfaceByName(out)
++	_, err = anet.InterfaceByName(out)
+ 	if err != nil {
+ 		return "", fmt.Errorf("invalid interface name %q", out)
+ 	}
+diff --git a/go.mod b/go.mod
+index be780dc..18c894e 100644
+--- a/go.mod
++++ b/go.mod
+@@ -11,6 +11,12 @@ replace (
+ // Nomad is built using the current source of the API module.
+ replace github.com/hashicorp/nomad/api => ./api
+ 
++// Use local anet for Android network interface support
++replace github.com/wlynxg/anet => ./anet
++
++// Use patched go-sockaddr for Android compatibility
++replace github.com/hashicorp/go-sockaddr => ./go-sockaddr
++
+ require (
+ 	github.com/LK4D4/joincontext v0.0.0-20171026170139-1724345da6d5
+ 	github.com/Masterminds/sprig/v3 v3.3.0
+@@ -124,6 +130,7 @@ require (
+ 	github.com/shoenig/go-m1cpu v0.1.7
+ 	github.com/shoenig/test v1.12.2
+ 	github.com/stretchr/testify v1.11.1
++	github.com/wlynxg/anet v0.0.0
+ 	github.com/zclconf/go-cty v1.17.0
+ 	github.com/zclconf/go-cty-yaml v1.2.0
+ 	go.etcd.io/bbolt v1.4.3
+@@ -207,7 +214,7 @@ require (
+ 	github.com/benbjohnson/immutable v0.4.0 // indirect
+ 	github.com/beorn7/perks v1.0.1 // indirect
+ 	github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d // indirect
+-	github.com/bgentry/speakeasy v0.1.0 // indirect
++	github.com/bgentry/speakeasy v0.2.0 // indirect
+ 	github.com/bmatcuk/doublestar v1.3.4 // indirect
+ 	github.com/boltdb/bolt v1.3.1 // indirect
+ 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+diff --git a/go.sum b/go.sum
+index f243fba..d2e7820 100644
+--- a/go.sum
++++ b/go.sum
+@@ -175,8 +175,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
+ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
+ github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d h1:xDfNPAt8lFiC1UJrqV3uuy861HCTo708pDMbjHHdCas=
+ github.com/bgentry/go-netrc v0.0.0-20140422174119-9fd32a8b3d3d/go.mod h1:6QX/PXZ00z/TKoufEY6K/a0k6AhaJrQKdFe6OfVXsa4=
+-github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQkY=
+-github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
++github.com/bgentry/speakeasy v0.2.0 h1:tgObeVOf8WAvtuAX6DhJ4xks4CFNwPDZiqzGqIHE51E=
++github.com/bgentry/speakeasy v0.2.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
+ github.com/bmatcuk/doublestar v1.3.4 h1:gPypJ5xD31uhX6Tf54sDPUOBXTqKH4c9aPY66CyQrS0=
+ github.com/bmatcuk/doublestar v1.3.4/go.mod h1:wiQtGV+rzVYxB7WIlirSN++5HPtPlXEo9MEoZQC/PmE=
+ github.com/boltdb/bolt v1.3.1 h1:JQmyP4ZBrce+ZQu0dY660FMfatumYDLun9hBCUVIkF4=
+@@ -512,8 +512,6 @@ github.com/hashicorp/go-set/v2 v2.1.0 h1:iERPCQWks+I+4bTgy0CT2myZsCqNgBg79ZHqwni
+ github.com/hashicorp/go-set/v2 v2.1.0/go.mod h1:6q4nh8UCVZODn2tJ5RbJi8+ki7pjZBsAEYGt6yaGeTo=
+ github.com/hashicorp/go-set/v3 v3.0.1 h1:ZwO15ZYmIrFYL9zSm2wBuwcRiHxVdp46m/XA/MUlM6I=
+ github.com/hashicorp/go-set/v3 v3.0.1/go.mod h1:0oPQqhtitglZeT2ZiWnRIfUG6gJAHnn7LzrS7SbgNY4=
+-github.com/hashicorp/go-sockaddr v1.0.7 h1:G+pTkSO01HpR5qCxg7lxfsFEZaG+C0VssTy/9dbT+Fw=
+-github.com/hashicorp/go-sockaddr v1.0.7/go.mod h1:FZQbEYa1pxkQ7WLpyXJ6cbjpT8q0YgQaK/JakXqGyWw=
+ github.com/hashicorp/go-syslog v1.0.0 h1:KaodqZuhUoZereWVIYmpUgZysurB1kBLX2j0MwMrUAE=
+ github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
+ github.com/hashicorp/go-uuid v1.0.0/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=

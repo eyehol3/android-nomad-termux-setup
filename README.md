@@ -10,6 +10,7 @@ This is a patched Nomad build that replaces `net.Interfaces()` with [anet](https
 |------|-------------|
 | `nomad-android` | Nomad 1.11.3-dev, linux/arm64, statically linked |
 | `setup.sh` | One-shot Termux setup: packages, SSH, proot Debian, Nomad config, boot script |
+| `patches/` | Patch files + build script to reproduce `nomad-android` from source ([details](patches/README.md)) |
 
 ## Prerequisites
 
