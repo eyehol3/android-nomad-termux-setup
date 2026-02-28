@@ -24,7 +24,7 @@ This is a patched Nomad build that replaces `net.Interfaces()` with [anet](https
 ```bash
 # In Termux:
 pkg install -y git
-git clone git@github.com:eyehol3/android-nomad-termux-setup.git
+git clone https://github.com/eyehol3/android-nomad-termux-setup
 cd android-nomad-termux-setup
 
 # Run setup (binary is picked up automatically from the repo)
