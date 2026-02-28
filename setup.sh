@@ -16,7 +16,9 @@ log() { echo -e "\n\033[1;34m>>> $*\033[0m"; }
 
 # -- 1. System packages ------------------------------------------------------
 log "Updating packages & installing base tools"
-pkg update -y && pkg upgrade -y
+export DEBIAN_FRONTEND=noninteractive
+pkg update -y -o Dpkg::Options::="--force-confnew"
+pkg upgrade -y -o Dpkg::Options::="--force-confnew"
 pkg install -y \
   openssh \
   proot-distro \
