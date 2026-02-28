@@ -67,13 +67,16 @@ fi
 # -- 6. Nomad binary ----------------------------------------------------------
 log "Installing nomad-android into proot Debian"
 NOMAD_BIN="$PROOT_ROOT/usr/local/bin/nomad-android"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Try to get from repo release, fall back to local ~/files/
-if [ -f "$HOME_DIR/files/nomad-android" ]; then
+# Look for binary: next to this script first, then ~/files/
+if [ -f "$SCRIPT_DIR/nomad-android" ]; then
+  cp "$SCRIPT_DIR/nomad-android" "$NOMAD_BIN"
+elif [ -f "$HOME_DIR/files/nomad-android" ]; then
   cp "$HOME_DIR/files/nomad-android" "$NOMAD_BIN"
 else
-  echo "ERROR: nomad-android binary not found at ~/files/nomad-android"
-  echo "Please scp it first: scp nomad-android phoneserver:files/"
+  echo "ERROR: nomad-android binary not found."
+  echo "It should be next to setup.sh or at ~/files/nomad-android"
   exit 1
 fi
 chmod +x "$NOMAD_BIN"

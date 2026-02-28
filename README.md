@@ -26,11 +26,7 @@ pkg install -y git
 git clone git@github.com:eyehol3/android-nomad-termux-setup.git
 cd android-nomad-termux-setup
 
-# Copy binary where setup.sh expects it
-mkdir -p ~/files
-cp nomad-android ~/files/
-
-# Run setup
+# Run setup (binary is picked up automatically from the repo)
 chmod +x setup.sh
 bash setup.sh
 
