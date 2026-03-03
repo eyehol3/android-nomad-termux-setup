@@ -1,0 +1,29 @@
+diff --git a/drivers/shared/executor/executor.go b/drivers/shared/executor/executor.go
+index 394f034..2e4da2a 100644
+--- a/drivers/shared/executor/executor.go
++++ b/drivers/shared/executor/executor.go
+@@ -386,7 +386,7 @@ func (e *UniversalExecutor) Launch(command *ExecCommand) (*ProcessState, error)
+ 	running, cleanup, err := e.configureResourceContainer(command, os.Getpid())
+ 	if err != nil {
+ 		e.logger.Error("failed to configure container, process isolation will not work", "error", err)
+-		if os.Geteuid() == 0 || e.usesCustomCgroup() {
++		if (os.Geteuid() == 0 && cgroupslib.GetMode() != cgroupslib.OFF) || e.usesCustomCgroup() {
+ 			return nil, fmt.Errorf("unable to configure cgroups: %w", err)
+ 		}
+ 		// keep going if we are not root; some folks run nomad as non-root and
+diff --git a/drivers/shared/executor/executor_universal_linux.go b/drivers/shared/executor/executor_universal_linux.go
+index cb7339c..5352679 100644
+--- a/drivers/shared/executor/executor_universal_linux.go
++++ b/drivers/shared/executor/executor_universal_linux.go
+@@ -270,6 +270,11 @@ func (e *UniversalExecutor) configureCG2(cgroup string, command *ExecCommand) {
+ func (e *UniversalExecutor) setOomAdj(oomScore int32) error {
+ 	// /proc/self/oom_score_adj should work on both cgroups v1 and v2 systems
+ 	// range is -1000 to 1000; 0 is the default
++	if cgroupslib.GetMode() == cgroupslib.OFF {
++		// cgroups are disabled (e.g. running inside proot on Android)
++		// so skip OOM score adjustment as /proc may not be writable
++		return nil
++	}
+ 	return os.WriteFile("/proc/self/oom_score_adj", []byte(strconv.Itoa(int(oomScore))), 0644)
+ }
+ 

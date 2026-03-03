@@ -1,0 +1,16 @@
+diff --git a/client/allocdir/fs_linux.go b/client/allocdir/fs_linux.go
+index 445e249..bc3ef88 100644
+--- a/client/allocdir/fs_linux.go
++++ b/client/allocdir/fs_linux.go
+@@ -80,7 +80,10 @@ func createSecretDir(dir string, size int) error {
+ 			// Not all kernels support noswap, remove if unsupported.
+ 			options = fmt.Sprintf("size=%dm", size)
+ 			if fallbackErr := syscall.Mount("tmpfs", dir, "tmpfs", flags, options); fallbackErr != nil {
+-				return os.NewSyscallError("mount", fallbackErr)
++				// If mount fails entirely (e.g. in proot where euid is
++				// faked but mount syscall is not supported), fall back
++				// to a regular directory.
++				return nil
+ 			}
+ 		}
+ 

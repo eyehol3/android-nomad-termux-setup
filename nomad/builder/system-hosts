@@ -1,0 +1,10 @@
+127.0.0.1 localhost
+104.21.44.149 packages-cf.termux.dev
+151.101.128.223 pypi.org
+151.101.192.223 files.pythonhosted.org
+104.20.1.252 nodejs.org
+104.16.4.34 registry.npmjs.org
+140.82.121.4 github.com
+151.101.130.137 crates.io
+151.101.2.137 static.crates.io
+151.101.2.137 index.crates.io

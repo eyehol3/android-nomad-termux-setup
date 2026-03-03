@@ -25,12 +25,16 @@ pkg install -y \
   termux-services \
   termux-api \
   git \
+  git-lfs \
   vim \
   python \
   nodejs \
   ffmpeg \
   libjpeg-turbo \
   tmux
+
+# Initialize git-lfs (needed to fetch the nomad-android binary)
+git lfs install
 
 # -- 2. Wake lock & storage ---------------------------------------------------
 log "Setting up wake lock and storage"
@@ -71,14 +75,20 @@ log "Installing nomad-android into proot Debian"
 NOMAD_BIN="$PROOT_ROOT/usr/local/bin/nomad-android"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Fetch the real binary via git-lfs if we're inside the repo
+if [ -d "$SCRIPT_DIR/.git" ]; then
+  log "Fetching nomad-android via git-lfs..."
+  (cd "$SCRIPT_DIR" && git lfs pull)
+fi
+
 # Look for binary: next to this script first, then ~/files/
-if [ -f "$SCRIPT_DIR/nomad-android" ]; then
+if [ -f "$SCRIPT_DIR/nomad-android" ] && [ "$(wc -c < "$SCRIPT_DIR/nomad-android")" -gt 1000 ]; then
   cp "$SCRIPT_DIR/nomad-android" "$NOMAD_BIN"
-elif [ -f "$HOME_DIR/files/nomad-android" ]; then
+elif [ -f "$HOME_DIR/files/nomad-android" ] && [ "$(wc -c < "$HOME_DIR/files/nomad-android")" -gt 1000 ]; then
   cp "$HOME_DIR/files/nomad-android" "$NOMAD_BIN"
 else
-  echo "ERROR: nomad-android binary not found."
-  echo "It should be next to setup.sh or at ~/files/nomad-android"
+  echo "ERROR: nomad-android binary not found (or is a git-lfs pointer)."
+  echo "Run 'git lfs pull' in the repo, or place the binary at ~/files/nomad-android"
   exit 1
 fi
 chmod +x "$NOMAD_BIN"

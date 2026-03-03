@@ -1,0 +1,21 @@
+diff --git a/client/lib/cgroupslib/mount.go b/client/lib/cgroupslib/mount.go
+index 093d8db..5afa89d 100644
+--- a/client/lib/cgroupslib/mount.go
++++ b/client/lib/cgroupslib/mount.go
+@@ -35,6 +35,16 @@ func detect() Mode {
+ 	if mode == CG1 && os.Geteuid() > 0 {
+ 		return OFF
+ 	}
++	if mode == CG1 {
++		// Verify cgroups v1 is actually functional by testing a write.
++		// In proot-like environments (e.g. Android/Termux), euid is
++		// faked to 0 but the kernel still blocks cgroup operations.
++		testDir := filepath.Join(root, "freezer", ".nomad-probe")
++		if err := os.Mkdir(testDir, 0o755); err != nil {
++			return OFF
++		}
++		os.Remove(testDir)
++	}
+ 
+ 	if mode == CG2 {
+ 		if !functionalCgroups2("cgroup.controllers") {
